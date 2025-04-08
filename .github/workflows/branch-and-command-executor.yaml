@@ -1,0 +1,165 @@
+name: Branch and Command Executor
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseBranch:
+        description: 'Base branch to create new branch from'
+        required: true
+        default: 'dev'
+      newBranch:
+        description: 'Name of the new branch to be created'
+        required: true
+      workingDir:
+        description: 'Working directory to execute commands in'
+        required: true
+      bashCommand:
+        description: 'Bash command to execute'
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-branch-and-pr:
+    runs-on: build-runner
+    timeout-minutes: 30  # Prevent hanging workflows
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.baseBranch }}
+          fetch-depth: 0
+
+      - name: Validate inputs
+        run: |
+          # Validate base branch
+          if [[ "${{ github.event.inputs.baseBranch }}" == "main" ]]; then
+            echo "ERROR: Cannot use 'main' as base branch for safety reasons"
+            exit 1
+          fi
+          
+          # Validate working directory
+          if [[ ! -d "${{ github.event.inputs.workingDir }}" ]]; then
+            echo "ERROR: Working directory '${{ github.event.inputs.workingDir }}' does not exist"
+            exit 1
+          fi
+
+      - name: Set up Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Check if branch already exists
+        id: check_branch
+        run: |
+          if git ls-remote --heads origin ${{ github.event.inputs.newBranch }} | grep -q ${{ github.event.inputs.newBranch }}; then
+            echo "ERROR: Branch '${{ github.event.inputs.newBranch }}' already exists. Please use a different branch name."
+            exit 1
+          fi
+
+      - name: Create new branch
+        run: |
+          git checkout -b ${{ github.event.inputs.newBranch }}
+
+      - name: Execute command
+        working-directory: ${{ github.event.inputs.workingDir }}
+        id: run_command
+        run: |
+          echo "Command started at $(date)"
+          set +e  # Continue on error
+          output=$(timeout 25m ${{ github.event.inputs.bashCommand }} 2>&1)
+          exit_code=$?
+          set -e
+          echo "Command finished at $(date)"
+          
+          # Save exit code for later use
+          echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
+          
+          # Save raw output to file
+          echo "$output" > command_output.txt
+
+      - name: Process command output
+        id: process_output
+        run: |
+          # Read the raw output
+          output=$(cat command_output.txt)
+          
+          # Truncate very long outputs
+          max_length=65000
+          if [ ${#output} -gt $max_length ]; then
+            truncated_output="${output:0:$max_length}..."
+            echo "Output was truncated due to length. Showing first $max_length characters."
+            output="$truncated_output\n...\n[Output truncated due to length]"
+          fi
+          
+          # Save processed output for PR description
+          echo "command_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$output" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Display command output
+        run: |
+          echo "::group::Command Output"
+          cat command_output.txt
+          echo "::endgroup::"
+          
+          # Check exit code
+          if [ ${{ steps.run_command.outputs.exit_code }} -ne 0 ]; then
+            echo "WARNING: Command exited with non-zero status: ${{ steps.run_command.outputs.exit_code }}"
+          fi
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if git status --porcelain | grep -q .; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected, will create commit"
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected"
+          fi
+
+      - name: Commit changes
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git add .
+          git commit -m 'Execute command: ${{ github.event.inputs.bashCommand }}'
+          git push origin ${{ github.event.inputs.newBranch }}
+
+      - name: Create Pull Request
+        if: steps.check_changes.outputs.changes == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ github.event.inputs.baseBranch }}
+          branch: ${{ github.event.inputs.newBranch }}
+          title: "Execute command: ${{ github.event.inputs.bashCommand }}"
+          body: |
+            # Command Execution Results
+            
+            **Command:**
+            ```bash
+            ${{ github.event.inputs.bashCommand }}
+            ```
+            
+            **Working Directory:** `${{ github.event.inputs.workingDir }}`
+            
+            **Exit Code:** ${{ steps.run_command.outputs.exit_code }}
+            
+            ## Command Output:
+            ```
+            ${{ steps.run_command.outputs.command_output }}
+            ```
+            
+            ---
+            *Automated PR created by GitHub Actions*
+
+      - name: No changes detected
+        if: steps.check_changes.outputs.changes == 'false'
+        run: |
+          echo "No changes were detected after running the command. No PR will be created."
+
+
