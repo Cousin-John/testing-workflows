@@ -71,10 +71,7 @@ jobs:
           echo "Command started at $(date)"
           echo "Current working directory: $(pwd)"
           set +e  # Continue on error
-          # Create the file and ensure it's tracked by git
-          ${{ github.event.inputs.bashCommand }}
-          git add .
-          git status
+          # Execute the command and capture output
           output=$(timeout 25m ${{ github.event.inputs.bashCommand }} 2>&1)
           exit_code=$?
           set -e
@@ -85,6 +82,10 @@ jobs:
           
           # Save raw output to file
           echo "$output" > command_output.txt
+          
+          # Stage any changes
+          git add .
+          git status
 
       - name: Debug - Show current directory and contents
         run: |
