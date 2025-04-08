@@ -83,12 +83,14 @@ jobs:
           # Save raw output to file
           echo "$output" > command_output.txt
           
-          # Stage and commit changes immediately
+          # Stage changes and check if there are any
           git add .
-          git status
           if git status --porcelain | grep -q .; then
+            echo "changes=true" >> $GITHUB_OUTPUT
             git commit -m "Execute command: ${{ github.event.inputs.bashCommand }}"
             git push origin ${{ github.event.inputs.newBranch }}
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Debug - Show current directory and contents
@@ -131,19 +133,8 @@ jobs:
             echo "WARNING: Command exited with non-zero status: ${{ steps.run_command.outputs.exit_code }}"
           fi
 
-      - name: Check for changes
-        id: check_changes
-        run: |
-          if git status --porcelain | grep -q .; then
-            echo "changes=true" >> $GITHUB_OUTPUT
-            echo "Changes detected, will create commit"
-          else
-            echo "changes=false" >> $GITHUB_OUTPUT
-            echo "No changes detected"
-          fi
-
       - name: Create Pull Request
-        if: steps.check_changes.outputs.changes == 'true'
+        if: steps.run_command.outputs.changes == 'true'
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -171,7 +162,7 @@ jobs:
             *Automated PR created by GitHub Actions*
 
       - name: No changes detected
-        if: steps.check_changes.outputs.changes == 'false'
+        if: steps.run_command.outputs.changes == 'false'
         run: |
           echo "No changes were detected after running the command. No PR will be created."
 
