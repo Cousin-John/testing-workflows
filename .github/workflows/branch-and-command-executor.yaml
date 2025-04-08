@@ -83,9 +83,13 @@ jobs:
           # Save raw output to file
           echo "$output" > command_output.txt
           
-          # Stage any changes
+          # Stage and commit changes immediately
           git add .
           git status
+          if git status --porcelain | grep -q .; then
+            git commit -m "Execute command: ${{ github.event.inputs.bashCommand }}"
+            git push origin ${{ github.event.inputs.newBranch }}
+          fi
 
       - name: Debug - Show current directory and contents
         run: |
@@ -137,13 +141,6 @@ jobs:
             echo "changes=false" >> $GITHUB_OUTPUT
             echo "No changes detected"
           fi
-
-      - name: Commit changes
-        if: steps.check_changes.outputs.changes == 'true'
-        run: |
-          git add .
-          git commit -m 'Execute command: ${{ github.event.inputs.bashCommand }}'
-          git push origin ${{ github.event.inputs.newBranch }}
 
       - name: Create Pull Request
         if: steps.check_changes.outputs.changes == 'true'
