@@ -1,0 +1,50 @@
+name: Branch Created - Closer Web
+
+on:
+  create
+
+jobs:
+  get_sc_data:
+    if: github.event.ref_type == 'branch'
+    uses: ./.github/workflows/.get-shortcut-data.yaml
+    secrets: inherit
+
+  add-branch-auth-cors:
+    needs: get_sc_data
+    uses: ./.github/workflows/update-branch-auth-cors.yaml
+    with:
+      operation: "+"
+    secrets: inherit
+
+  create-draft-pr:
+    needs: get_sc_data
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Pull Request
+        uses: actions/github-script@v6
+        with:
+          script: |
+            var body = "# [Shortcut Link](https://app.shortcut.com/lawlabs/story/${{needs.get_sc_data.outputs.ticket_number}})";
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              base: "dev",
+              head: context.ref,
+              draft: true,
+              title: ${{ toJSON(needs.get_sc_data.outputs.title) }},
+              body
+            });
+
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              assignees: ["${{ github.actor }}"]
+            });
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: ["${{ needs.get_sc_data.outputs.team_name }}"]
+            });
