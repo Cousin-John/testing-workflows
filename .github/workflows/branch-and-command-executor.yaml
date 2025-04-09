@@ -207,7 +207,9 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const { data: pr } = await github.rest.pulls.create({
+            const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
+            
+            const prData = {
               owner: context.repo.owner,
               repo: context.repo.repo,
               base: "${{ github.event.inputs.baseBranch }}",
@@ -226,15 +228,21 @@ jobs:
                 "```\n\n" +
                 "---\n" +
                 "*Automated PR created by GitHub Actions*"
-            });
-
+            };
+            
+            console.log("Creating PR with data:", JSON.stringify(prData, null, 2));
+            
+            const { data: pr } = await octokit.rest.pulls.create(prData);
+            console.log("PR created:", pr.html_url);
+            
             // Add the workflow runner as an assignee
-            await github.rest.issues.addAssignees({
+            await octokit.rest.issues.addAssignees({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: pr.number,
               assignees: ["${{ github.actor }}"]
             });
+            console.log("Added assignee:", "${{ github.actor }}");
 
       - name: Debug PR Creation
         if: steps.run_command.outputs.changes == 'true'
