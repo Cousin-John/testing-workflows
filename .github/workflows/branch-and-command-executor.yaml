@@ -27,85 +27,134 @@ jobs:
     timeout-minutes: 30  # Prevent hanging workflows
 
     steps:
+      - name: Initialize log file
+        run: |
+          echo "=== Workflow Log ===" > workflow_log.txt
+          echo "Started at: $(date)" >> workflow_log.txt
+          echo "Repository: ${{ github.repository }}" >> workflow_log.txt
+          echo "Base branch: ${{ github.event.inputs.baseBranch }}" >> workflow_log.txt
+          echo "New branch: ${{ github.event.inputs.newBranch }}" >> workflow_log.txt
+          echo "Working directory: ${{ github.event.inputs.workingDir }}" >> workflow_log.txt
+          echo "Command: ${{ github.event.inputs.bashCommand }}" >> workflow_log.txt
+          echo "===================" >> workflow_log.txt
+
       - name: Checkout repository code
         uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.baseBranch }}
           fetch-depth: 0
 
+      - name: Log checkout information
+        run: |
+          echo "=== Checkout Repository ===" >> workflow_log.txt
+          echo "Checked out branch: ${{ github.event.inputs.baseBranch }}" >> workflow_log.txt
+          echo "Current branch: $(git branch --show-current)" >> workflow_log.txt
+          echo "===================" >> workflow_log.txt
+
       - name: Validate inputs
         run: |
+          echo "=== Validate Inputs ===" >> workflow_log.txt
           # Validate base branch
           if [[ "${{ github.event.inputs.baseBranch }}" == "main" ]]; then
-            echo "ERROR: Cannot use 'main' as base branch for safety reasons"
+            echo "ERROR: Cannot use 'main' as base branch for safety reasons" | tee -a workflow_log.txt
             exit 1
           fi
           
           # Validate working directory
           if [[ ! -d "${{ github.event.inputs.workingDir }}" ]]; then
-            echo "ERROR: Working directory '${{ github.event.inputs.workingDir }}' does not exist"
+            echo "ERROR: Working directory '${{ github.event.inputs.workingDir }}' does not exist" | tee -a workflow_log.txt
             exit 1
           fi
+          echo "Inputs validated successfully" >> workflow_log.txt
+          echo "===================" >> workflow_log.txt
 
       - name: Set up Git
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          echo "=== Set up Git ===" >> workflow_log.txt
+          git config --global user.name 'github-actions[bot]' 2>&1 | tee -a workflow_log.txt
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com' 2>&1 | tee -a workflow_log.txt
+          echo "Git config:" >> workflow_log.txt
+          git config --list 2>&1 | tee -a workflow_log.txt
+          echo "===================" >> workflow_log.txt
 
       - name: Check if branch already exists
         id: check_branch
         run: |
+          echo "=== Check if Branch Exists ===" >> workflow_log.txt
           if git ls-remote --heads origin ${{ github.event.inputs.newBranch }} | grep -q ${{ github.event.inputs.newBranch }}; then
-            echo "ERROR: Branch '${{ github.event.inputs.newBranch }}' already exists. Please use a different branch name."
+            echo "ERROR: Branch '${{ github.event.inputs.newBranch }}' already exists. Please use a different branch name." | tee -a workflow_log.txt
             exit 1
           fi
+          echo "Branch '${{ github.event.inputs.newBranch }}' does not exist yet" >> workflow_log.txt
+          echo "===================" >> workflow_log.txt
 
       - name: Create new branch
         run: |
-          git checkout -b ${{ github.event.inputs.newBranch }}
+          echo "=== Create New Branch ===" >> workflow_log.txt
+          git checkout -b ${{ github.event.inputs.newBranch }} 2>&1 | tee -a workflow_log.txt
+          echo "Current branch: $(git branch --show-current)" >> workflow_log.txt
+          echo "===================" >> workflow_log.txt
 
       - name: Execute command
         working-directory: ${{ github.event.inputs.workingDir }}
         id: run_command
         run: |
-          echo "Command started at $(date)"
-          echo "Current working directory: $(pwd)"
+          echo "=== Execute Command ===" >> workflow_log.txt
+          echo "Command started at $(date)" | tee -a workflow_log.txt
+          echo "Current working directory: $(pwd)" | tee -a workflow_log.txt
           set +e  # Continue on error
           # Execute the command and capture output
           output=$(timeout 25m ${{ github.event.inputs.bashCommand }} 2>&1)
           exit_code=$?
           set -e
-          echo "Command finished at $(date)"
+          echo "Command finished at $(date)" | tee -a workflow_log.txt
+          echo "Exit code: $exit_code" | tee -a workflow_log.txt
           
           # Save exit code for later use
           echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
           
           # Save raw output to file
           echo "$output" > command_output.txt
+          echo "Command output:" | tee -a workflow_log.txt
+          cat command_output.txt | tee -a workflow_log.txt
           
           # Stage changes and check if there are any
-          git add .
+          echo "Staging changes..." | tee -a workflow_log.txt
+          git add . 2>&1 | tee -a workflow_log.txt
+          echo "Git status after staging:" | tee -a workflow_log.txt
+          git status 2>&1 | tee -a workflow_log.txt
           if git status --porcelain | grep -q .; then
+            echo "Changes detected, committing..." | tee -a workflow_log.txt
             echo "changes=true" >> $GITHUB_OUTPUT
-            git commit -m "Execute command: ${{ github.event.inputs.bashCommand }}"
-            git push origin ${{ github.event.inputs.newBranch }}
+            git commit -m "Execute command: ${{ github.event.inputs.bashCommand }}" 2>&1 | tee -a workflow_log.txt
+            echo "Pushing changes..." | tee -a workflow_log.txt
+            git push origin ${{ github.event.inputs.newBranch }} 2>&1 | tee -a workflow_log.txt
+            echo "Git log after push:" | tee -a workflow_log.txt
+            git log -n 2 2>&1 | tee -a workflow_log.txt
           else
+            echo "No changes detected in git status" | tee -a workflow_log.txt
             echo "changes=false" >> $GITHUB_OUTPUT
           fi
+          echo "===================" >> workflow_log.txt
 
       - name: Debug - Show current directory and contents
         run: |
-          echo "Current directory: $(pwd)"
-          echo "Directory contents:"
-          ls -la
-          echo "Git status:"
-          git status
-          echo "Git diff:"
-          git diff
+          echo "=== Debug Information ===" >> workflow_log.txt
+          echo "Current directory: $(pwd)" | tee -a workflow_log.txt
+          echo "Directory contents:" | tee -a workflow_log.txt
+          ls -la 2>&1 | tee -a workflow_log.txt
+          echo "Git status:" | tee -a workflow_log.txt
+          git status 2>&1 | tee -a workflow_log.txt
+          echo "Git diff:" | tee -a workflow_log.txt
+          git diff 2>&1 | tee -a workflow_log.txt
+          echo "Git branch -a:" | tee -a workflow_log.txt
+          git branch -a 2>&1 | tee -a workflow_log.txt
+          echo "===================" >> workflow_log.txt
 
       - name: Process command output
         id: process_output
         run: |
+          echo "=== Process Command Output ===" >> workflow_log.txt
           # Read the raw output
           output=$(cat command_output.txt)
           
@@ -113,7 +162,7 @@ jobs:
           max_length=65000
           if [ ${#output} -gt $max_length ]; then
             truncated_output="${output:0:$max_length}..."
-            echo "Output was truncated due to length. Showing first $max_length characters."
+            echo "Output was truncated due to length. Showing first $max_length characters." | tee -a workflow_log.txt
             output="$truncated_output\n...\n[Output truncated due to length]"
           fi
           
@@ -121,17 +170,32 @@ jobs:
           echo "command_output<<EOF" >> $GITHUB_OUTPUT
           echo "$output" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+          echo "Command output processed" >> workflow_log.txt
+          echo "===================" >> workflow_log.txt
 
       - name: Display command output
         run: |
+          echo "=== Display Command Output ===" >> workflow_log.txt
           echo "::group::Command Output"
           cat command_output.txt
           echo "::endgroup::"
           
           # Check exit code
           if [ ${{ steps.run_command.outputs.exit_code }} -ne 0 ]; then
-            echo "WARNING: Command exited with non-zero status: ${{ steps.run_command.outputs.exit_code }}"
+            echo "WARNING: Command exited with non-zero status: ${{ steps.run_command.outputs.exit_code }}" | tee -a workflow_log.txt
           fi
+          echo "===================" >> workflow_log.txt
+
+      - name: Create Pull Request
+        if: steps.run_command.outputs.changes == 'true'
+        run: |
+          echo "=== Create Pull Request ===" >> workflow_log.txt
+          echo "Changes detected, creating PR..." | tee -a workflow_log.txt
+          echo "Base branch: ${{ github.event.inputs.baseBranch }}" | tee -a workflow_log.txt
+          echo "New branch: ${{ github.event.inputs.newBranch }}" | tee -a workflow_log.txt
+          echo "Git diff between branches:" | tee -a workflow_log.txt
+          git diff ${{ github.event.inputs.baseBranch }}...${{ github.event.inputs.newBranch }} 2>&1 | tee -a workflow_log.txt
+          echo "===================" >> workflow_log.txt
 
       - name: Create Pull Request
         if: steps.run_command.outputs.changes == 'true'
@@ -164,6 +228,14 @@ jobs:
       - name: No changes detected
         if: steps.run_command.outputs.changes == 'false'
         run: |
-          echo "No changes were detected after running the command. No PR will be created."
+          echo "=== No Changes Detected ===" >> workflow_log.txt
+          echo "No changes were detected after running the command. No PR will be created." | tee -a workflow_log.txt
+          echo "===================" >> workflow_log.txt
+
+      - name: Output workflow log
+        run: |
+          echo "=== Final Workflow Log ==="
+          cat workflow_log.txt
+          echo "==================="
 
 
