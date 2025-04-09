@@ -207,28 +207,25 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const title = "Execute command: " + "${{ github.event.inputs.bashCommand }}";
-            const body = "# Command Execution Results\n\n" +
-              "**Command:**\n" +
-              "```bash\n" +
-              "${{ github.event.inputs.bashCommand }}\n" +
-              "```\n\n" +
-              "**Working Directory:** `${{ github.event.inputs.workingDir }}`\n\n" +
-              "**Exit Code:** ${{ steps.run_command.outputs.exit_code }}\n\n" +
-              "## Command Output:\n" +
-              "```\n" +
-              "${{ steps.run_command.outputs.command_output }}\n" +
-              "```\n\n" +
-              "---\n" +
-              "*Automated PR created by GitHub Actions*";
-
             const { data: pr } = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               base: "${{ github.event.inputs.baseBranch }}",
               head: "${{ github.event.inputs.newBranch }}",
-              title: title,
-              body: body
+              title: "Execute command: ${{ github.event.inputs.bashCommand }}",
+              body: "# Command Execution Results\n\n" +
+                "**Command:**\n" +
+                "```bash\n" +
+                "${{ github.event.inputs.bashCommand }}\n" +
+                "```\n\n" +
+                "**Working Directory:** `${{ github.event.inputs.workingDir }}`\n\n" +
+                "**Exit Code:** ${{ steps.run_command.outputs.exit_code }}\n\n" +
+                "## Command Output:\n" +
+                "```\n" +
+                "${{ steps.run_command.outputs.command_output }}\n" +
+                "```\n\n" +
+                "---\n" +
+                "*Automated PR created by GitHub Actions*"
             });
 
             // Add the workflow runner as an assignee
