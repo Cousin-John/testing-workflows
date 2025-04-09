@@ -120,7 +120,8 @@ jobs:
           
           # Stage changes and check if there are any
           echo "Staging changes..." | tee -a workflow_log.txt
-          git add . 2>&1 | tee -a workflow_log.txt
+          # Add all files except workflow_log.txt and command_output.txt
+          git add test.txt 2>&1 | tee -a workflow_log.txt
           echo "Git status after staging:" | tee -a workflow_log.txt
           git status 2>&1 | tee -a workflow_log.txt
           if git status --porcelain | grep -q .; then

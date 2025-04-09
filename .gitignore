@@ -1,0 +1,7 @@
+# GitHub Actions workflow logs
+workflow_log.txt
+command_output.txt
+
+# Temporary files
+*.tmp
+*.temp 
