@@ -233,9 +233,14 @@ jobs:
           echo "===================" >> workflow_log.txt
 
       - name: Output workflow log
+        if: always()
         run: |
           echo "=== Final Workflow Log ==="
-          cat workflow_log.txt
+          if [ -f workflow_log.txt ]; then
+            cat workflow_log.txt
+          else
+            echo "Workflow log file not found. This is unexpected."
+          fi
           echo "==================="
 
 
