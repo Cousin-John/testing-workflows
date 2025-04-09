@@ -226,6 +226,23 @@ jobs:
             ---
             *Automated PR created by GitHub Actions*
 
+      - name: Debug PR Creation
+        if: steps.run_command.outputs.changes == 'true'
+        run: |
+          echo "=== Debug PR Creation ===" >> workflow_log.txt
+          echo "Checking PR creation status..." | tee -a workflow_log.txt
+          echo "Base branch: ${{ github.event.inputs.baseBranch }}" | tee -a workflow_log.txt
+          echo "New branch: ${{ github.event.inputs.newBranch }}" | tee -a workflow_log.txt
+          echo "Git status:" | tee -a workflow_log.txt
+          git status 2>&1 | tee -a workflow_log.txt
+          echo "Git branch -a:" | tee -a workflow_log.txt
+          git branch -a 2>&1 | tee -a workflow_log.txt
+          echo "Git remote -v:" | tee -a workflow_log.txt
+          git remote -v 2>&1 | tee -a workflow_log.txt
+          echo "Git log -n 2:" | tee -a workflow_log.txt
+          git log -n 2 2>&1 | tee -a workflow_log.txt
+          echo "===================" >> workflow_log.txt
+
       - name: No changes detected
         if: steps.run_command.outputs.changes == 'false'
         run: |
