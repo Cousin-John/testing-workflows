@@ -187,7 +187,7 @@ jobs:
           fi
           echo "===================" >> workflow_log.txt
 
-      - name: Create Pull Request
+      - name: Log PR Creation
         if: steps.run_command.outputs.changes == 'true'
         run: |
           echo "=== Create Pull Request ===" >> workflow_log.txt
