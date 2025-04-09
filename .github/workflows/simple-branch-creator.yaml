@@ -1,0 +1,73 @@
+name: Simple Branch Creator
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseBranch:
+        description: 'Base branch to create new branch from'
+        required: true
+        default: 'dev'
+      newBranch:
+        description: 'Name of the new branch to be created'
+        required: true
+        default: 'test-branch'
+      command:
+        description: 'Command to execute'
+        required: true
+        default: 'echo "test" > test.txt'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-branch:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.baseBranch }}
+          fetch-depth: 0
+
+      - name: Generate random branch name
+        id: branch-name
+        run: |
+          RANDOM_SUFFIX=$(openssl rand -hex 4)
+          echo "branch_name=${{ github.event.inputs.newBranch }}-$RANDOM_SUFFIX" >> $GITHUB_OUTPUT
+
+      - name: Create and switch to new branch
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git checkout -b ${{ steps.branch-name.outputs.branch_name }}
+
+      - name: Execute command
+        run: ${{ github.event.inputs.command }}
+
+      - name: Commit and push changes
+        run: |
+          git add .
+          git commit -m "Execute command: ${{ github.event.inputs.command }}" || echo "No changes to commit"
+          git push origin ${{ steps.branch-name.outputs.branch_name }}
+
+      - name: Create Pull Request
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "Execute command: ${{ github.event.inputs.command }}",
+              head: "${{ steps.branch-name.outputs.branch_name }}",
+              base: "${{ github.event.inputs.baseBranch }}",
+              body: "Automated PR created by GitHub Actions workflow"
+            });
+            
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              assignees: ["${{ github.actor }}"]
+            }); 
