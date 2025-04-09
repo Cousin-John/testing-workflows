@@ -204,31 +204,42 @@ jobs:
 
       - name: Create Pull Request
         if: steps.run_command.outputs.changes == 'true'
-        uses: peter-evans/create-pull-request@v5
+        uses: actions/github-script@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          base: ${{ github.event.inputs.baseBranch }}
-          branch: ${{ github.event.inputs.newBranch }}
-          title: "Execute command: ${{ github.event.inputs.bashCommand }}"
-          body: |
-            # Command Execution Results
+          script: |
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              base: "${{ github.event.inputs.baseBranch }}",
+              head: "${{ github.event.inputs.newBranch }}",
+              title: "Execute command: ${{ github.event.inputs.bashCommand }}",
+              body: `# Command Execution Results
             
             **Command:**
-            ```bash
+            \`\`\`bash
             ${{ github.event.inputs.bashCommand }}
-            ```
+            \`\`\`
             
-            **Working Directory:** `${{ github.event.inputs.workingDir }}`
+            **Working Directory:** \`${{ github.event.inputs.workingDir }}\`
             
             **Exit Code:** ${{ steps.run_command.outputs.exit_code }}
             
             ## Command Output:
-            ```
+            \`\`\`
             ${{ steps.run_command.outputs.command_output }}
-            ```
+            \`\`\`
             
             ---
-            *Automated PR created by GitHub Actions*
+            *Automated PR created by GitHub Actions*`
+            });
+
+            // Add the workflow runner as an assignee
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              assignees: ["${{ github.actor }}"]
+            });
 
       - name: Debug PR Creation
         if: steps.run_command.outputs.changes == 'true'
