@@ -248,7 +248,8 @@ jobs:
           echo "Git log -n 2:" | tee -a workflow_log.txt
           git log -n 2 2>&1 | tee -a workflow_log.txt
           echo "Git diff between branches:" | tee -a workflow_log.txt
-          git diff ${{ github.event.inputs.baseBranch }}...${{ github.event.inputs.newBranch }} 2>&1 | tee -a workflow_log.txt
+          git fetch origin ${{ github.event.inputs.baseBranch }}:${{ github.event.inputs.baseBranch }} 2>&1 | tee -a workflow_log.txt
+          git diff ${{ github.event.inputs.baseBranch }}...HEAD 2>&1 | tee -a workflow_log.txt
           echo "===================" >> workflow_log.txt
 
       - name: No changes detected
