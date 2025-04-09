@@ -132,6 +132,8 @@ jobs:
             git push origin ${{ github.event.inputs.newBranch }} 2>&1 | tee -a workflow_log.txt
             echo "Git log after push:" | tee -a workflow_log.txt
             git log -n 2 2>&1 | tee -a workflow_log.txt
+            echo "Verifying remote branch..." | tee -a workflow_log.txt
+            git ls-remote --heads origin ${{ github.event.inputs.newBranch }} 2>&1 | tee -a workflow_log.txt
           else
             echo "No changes detected in git status" | tee -a workflow_log.txt
             echo "changes=false" >> $GITHUB_OUTPUT
