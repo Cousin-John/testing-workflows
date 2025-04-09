@@ -16,9 +16,11 @@ on:
         required: true
         default: 'echo "test" > test.txt'
 
+# These permissions are needed for the github-actions[bot] to create PRs and push code
 permissions:
   contents: write
   pull-requests: write
+  issues: write
 
 jobs:
   create-branch:
@@ -30,6 +32,7 @@ jobs:
         with:
           ref: ${{ github.event.inputs.baseBranch }}
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate random branch name
         id: branch-name
@@ -40,7 +43,7 @@ jobs:
       - name: Create and switch to new branch
         run: |
           git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git checkout -b ${{ steps.branch-name.outputs.branch_name }}
 
       - name: Execute command
@@ -53,21 +56,11 @@ jobs:
           git push origin ${{ steps.branch-name.outputs.branch_name }}
 
       - name: Create Pull Request
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const { data: pr } = await github.rest.pulls.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: "Execute command: ${{ github.event.inputs.command }}",
-              head: "${{ steps.branch-name.outputs.branch_name }}",
-              base: "${{ github.event.inputs.baseBranch }}",
-              body: "Automated PR created by GitHub Actions workflow"
-            });
-            
-            await github.rest.issues.addAssignees({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: pr.number,
-              assignees: ["${{ github.actor }}"]
-            }); 
+        run: |
+          gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
+          gh pr create \
+            --title "Execute command: ${{ github.event.inputs.command }}" \
+            --body "Automated PR created by GitHub Actions workflow" \
+            --base "${{ github.event.inputs.baseBranch }}" \
+            --head "${{ steps.branch-name.outputs.branch_name }}" \
+            --assignee "${{ github.actor }}" 
