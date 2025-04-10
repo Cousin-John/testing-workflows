@@ -16,11 +16,11 @@ on:
         required: true
         default: 'echo "test" > test.txt'
 
-# These permissions are needed for the github-actions[bot] to create PRs and push code
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
+# # These permissions are needed for the github-actions[bot] to create PRs and push code
+# permissions:
+#   contents: write
+#   pull-requests: write
+#   issues: write
 
 jobs:
   create-branch:
