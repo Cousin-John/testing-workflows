@@ -84,7 +84,7 @@ jobs:
       - name: Add command output as PR comment
         if: steps.commit.outputs.commit_success == 'true'
         run: |
-          gh pr comment ${{ steps.create-pr.outputs.pr_number }} --body "Command executed:
+          COMMENT_BODY="Command executed:
           \`\`\`bash
           ${{ github.event.inputs.command }}
           \`\`\`
@@ -93,4 +93,5 @@ jobs:
           \`\`\`
           ${{ steps.execute-command.outputs.command_output }}
           \`\`\`"
+          gh pr comment ${{ steps.create-pr.outputs.pr_number }} --body "$COMMENT_BODY"
 
