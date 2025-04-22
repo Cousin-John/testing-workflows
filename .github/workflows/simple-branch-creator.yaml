@@ -47,7 +47,7 @@ jobs:
           echo "command_input<<EOF" >> $GITHUB_OUTPUT
           echo "${{ github.event.inputs.command }}" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          output=$(eval "${{ github.event.inputs.command }}")
+          output=$(eval '${{ github.event.inputs.command }}')
           echo "Command output:"
           echo "$output"
           echo "command_output<<EOF" >> $GITHUB_OUTPUT
@@ -57,6 +57,7 @@ jobs:
       - name: Commit and push changes
         id: commit
         run: |
+          # NOTE: this is done to avoid issues with special characters in the command... printf offers a way to escape special characters
           COMMIT_MSG=$(printf '%q' "Execute command: ${{ github.event.inputs.command }}")
           git add .
           if git commit -m "$COMMIT_MSG"; then
