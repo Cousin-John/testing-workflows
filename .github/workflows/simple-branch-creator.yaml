@@ -50,6 +50,7 @@ jobs:
           output=$(eval '${{ github.event.inputs.command }}')
           echo "Command output:"
           echo "$output"
+          echo "$output" > command_output.txt
           echo "command_output<<EOF" >> $GITHUB_OUTPUT
           echo "$output" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -102,7 +103,7 @@ jobs:
 
           Command output:
           \`\`\`
-          ${{ steps.execute-command.outputs.command_output }}
+          $(cat command_output.txt)
           \`\`\`"
           gh pr comment ${{ steps.create-pr.outputs.pr_number }} --body "$COMMENT_BODY"
 
