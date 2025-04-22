@@ -86,7 +86,7 @@ jobs:
         run: |
           COMMENT_BODY="Command executed:
           \`\`\`bash
-          ${{ github.event.inputs.command }}
+          ${{ steps.execute-command.outputs.command_input }}
           \`\`\`
 
           Command output:
