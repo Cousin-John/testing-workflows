@@ -54,7 +54,8 @@ jobs:
         id: commit
         run: |
           git add .
-          if git commit -m "Execute command: ${{ github.event.inputs.command }}"; then
+          COMMIT_MSG="Execute command: ${{ github.event.inputs.command }}"
+          if git commit -m "$COMMIT_MSG"; then
             echo "commit_success=true" >> $GITHUB_OUTPUT
             git push origin ${{ steps.branch-name.outputs.branch_name }}
           else
