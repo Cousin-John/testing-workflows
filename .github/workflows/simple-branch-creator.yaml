@@ -42,9 +42,9 @@ jobs:
       - name: Execute command
         id: execute-command
         run: |
-          COMMAND="${{ github.event.inputs.command }}"
+          COMMAND='${{ github.event.inputs.command }}'
           echo "Executing command: $COMMAND"
-          output=$($COMMAND)
+          output=$(eval "$COMMAND")
           echo "Command output:"
           echo "$output"
           echo "command_output<<EOF" >> $GITHUB_OUTPUT
