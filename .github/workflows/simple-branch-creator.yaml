@@ -42,7 +42,7 @@ jobs:
       - name: Execute command
         id: execute-command
         run: |
-          COMMAND=$(printf '%q' "${{ github.event.inputs.command }}")
+          COMMAND=$(printf '%q' '${{ github.event.inputs.command }}')
           echo "Executing command: $COMMAND"
           output=$(eval "$COMMAND")
           echo "Command output:"
