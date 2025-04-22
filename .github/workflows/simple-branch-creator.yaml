@@ -42,14 +42,17 @@ jobs:
       - name: Execute command
         id: execute-command
         run: |
-          COMMAND='${{ github.event.inputs.command }}'
-          echo "Executing command: $COMMAND"
-          output=$(eval "$COMMAND")
+          echo "${{ github.event.inputs.command }}" > command.sh
+          chmod +x command.sh
+          echo "Executing command from file:"
+          cat command.sh
+          output=$(./command.sh)
           echo "Command output:"
           echo "$output"
           echo "command_output<<EOF" >> $GITHUB_OUTPUT
           echo "$output" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+          rm command.sh  # Remove the temporary command file
 
       - name: Commit and push changes
         id: commit
