@@ -44,6 +44,7 @@ jobs:
         run: |
           COMMAND=$(printf '%q' '${{ github.event.inputs.command }}')
           echo "Executing command: $COMMAND"
+          echo "command_input="$COMMAND" >> $GITHUB_OUTPUT
           output=$(eval "${{ github.event.inputs.command }}")
           echo "Command output:"
           echo "$output"
@@ -69,7 +70,7 @@ jobs:
         run: |
           gh auth login --with-token <<< "${{ secrets.PAT_TOKEN }}"
           PR_URL=$(gh pr create \
-            --title "Execute command: ${{ github.event.inputs.command }}" \
+            --title "Execute command: ${{ steps.execute-command.outputs.command_input }}" \
             --body "Automated PR created by GitHub Actions workflow" \
             --base "${{ github.event.inputs.baseBranch }}" \
             --head "${{ steps.branch-name.outputs.branch_name }}" \
