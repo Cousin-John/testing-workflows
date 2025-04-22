@@ -72,8 +72,18 @@ jobs:
         id: create-pr
         run: |
           gh auth login --with-token <<< "${{ secrets.PAT_TOKEN }}"
+          COMMAND_INPUT="${{ steps.execute-command.outputs.command_input }}"
+          # Truncate command input to the first 100 characters for the title
+          TRUNCATED_COMMAND="${COMMAND_INPUT:0:100}"
+          # Add ellipsis if the command was actually truncated
+          if [ ${#COMMAND_INPUT} -gt 100 ]; then
+            TRUNCATED_COMMAND="${TRUNCATED_COMMAND}..."
+          fi
+          
+          PR_TITLE="Execute command: $TRUNCATED_COMMAND"
+
           PR_URL=$(gh pr create \
-            --title "Execute command: ${{ steps.execute-command.outputs.command_input }}" \
+            --title "$PR_TITLE" \
             --body "Automated PR created by GitHub Actions workflow" \
             --base "${{ github.event.inputs.baseBranch }}" \
             --head "${{ steps.branch-name.outputs.branch_name }}" \
