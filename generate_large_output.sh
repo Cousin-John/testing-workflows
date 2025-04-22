@@ -2,14 +2,12 @@
 
 # Create a large output file with repeated content
 output_file="large_output.txt"
-log_file="script_output.log"
 
 # Clear any existing files
 > "$output_file"
-> "$log_file"
 
 # Log start message
-echo "Starting to generate large output file..." | tee -a "$log_file"
+echo "Starting to generate large output file..."
 
 # Generate 5000 lines of content
 for i in {1..5000}; do
@@ -17,8 +15,5 @@ for i in {1..5000}; do
 done
 
 # Log completion message
-echo "Finished generating output file." | tee -a "$log_file"
-echo "Generated $(wc -l < "$output_file") lines of output." | tee -a "$log_file"
-
-# Output the log file contents to stdout
-cat "$log_file" 
+echo "Finished generating output file."
+echo "Generated $(wc -l < "$output_file") lines of output." 
