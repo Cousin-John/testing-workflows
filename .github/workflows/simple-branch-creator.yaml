@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.baseBranch }}
-          token: ${{ secrets.PAT_TOKEN }}
+          token: ${{ secrets.GH_DEPLOY_PAT }}
 
       - name: Generate random branch name
         id: branch-name
@@ -65,7 +65,7 @@ jobs:
         if: steps.commit.outputs.commit_success == 'true'
         id: create-pr
         run: |
-          gh auth login --with-token <<< "${{ secrets.PAT_TOKEN }}"
+          gh auth login --with-token <<< "${{ secrets.GH_DEPLOY_PAT }}"
           PR_URL=$(gh pr create \
             --title "Execute command: ${{ github.event.inputs.command }}" \
             --body "Automated PR created by GitHub Actions workflow" \
@@ -79,7 +79,12 @@ jobs:
       - name: Add command output as PR comment
         if: steps.commit.outputs.commit_success == 'true'
         run: |
-          gh pr comment ${{ steps.create-pr.outputs.pr_number }} --body "Command output:
+          gh pr comment ${{ steps.create-pr.outputs.pr_number }} --body "Command executed:
+          \`\`\`bash
+          ${{ github.event.inputs.command }}
+          \`\`\`
+
+          Command output:
           \`\`\`
           ${{ steps.execute-command.outputs.command_output }}
           \`\`\`"
