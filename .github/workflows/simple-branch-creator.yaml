@@ -1,4 +1,4 @@
-name: Simple Branch Creator
+name: Branch and Command Executor
 
 on:
   workflow_dispatch:
@@ -16,23 +16,16 @@ on:
         required: true
         default: 'echo "test" > test.txt'
 
-# # These permissions are needed for the github-actions[bot] to create PRs and push code
-# permissions:
-#   contents: write
-#   pull-requests: write
-#   issues: write
-
 jobs:
   create-branch:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.baseBranch }}
-          fetch-depth: 0
-          token: ${{ secrets.PAT_TOKEN }}
+          token: ${{ secrets.GH_DEPLOY_PAT }}
 
       - name: Generate random branch name
         id: branch-name
@@ -42,25 +35,52 @@ jobs:
 
       - name: Create and switch to new branch
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config --global user.name 'Lawlabs Bot'
+          git config --global user.email 'bot@lawlabs.ca'
           git checkout -b ${{ steps.branch-name.outputs.branch_name }}
 
       - name: Execute command
-        run: ${{ github.event.inputs.command }}
+        id: execute-command
+        run: |
+          echo "Executing command: ${{ github.event.inputs.command }}"
+          output=$(${{ github.event.inputs.command }})
+          echo "Command output:"
+          echo "$output"
+          echo "command_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$output" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Commit and push changes
+        id: commit
         run: |
           git add .
-          git commit -m "Execute command: ${{ github.event.inputs.command }}" || echo "No changes to commit"
-          git push origin ${{ steps.branch-name.outputs.branch_name }}
+          if git commit -m "Execute command: ${{ github.event.inputs.command }}"; then
+            echo "commit_success=true" >> $GITHUB_OUTPUT
+            git push origin ${{ steps.branch-name.outputs.branch_name }}
+          else
+            echo "commit_success=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create Pull Request
+        if: steps.commit.outputs.commit_success == 'true'
+        id: create-pr
         run: |
-          gh auth login --with-token <<< "${{ secrets.PAT_TOKEN }}"
-          gh pr create \
+          gh auth login --with-token <<< "${{ secrets.GH_DEPLOY_PAT }}"
+          PR_URL=$(gh pr create \
             --title "Execute command: ${{ github.event.inputs.command }}" \
             --body "Automated PR created by GitHub Actions workflow" \
             --base "${{ github.event.inputs.baseBranch }}" \
             --head "${{ steps.branch-name.outputs.branch_name }}" \
-            --assignee "${{ github.actor }}" 
+            --assignee "${{ github.actor }}")
+          
+          PR_NUMBER=$(basename "$PR_URL")
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Add command output as PR comment
+        if: steps.commit.outputs.commit_success == 'true'
+        run: |
+          gh pr comment ${{ steps.create-pr.outputs.pr_number }} --body "Command output:
+          \`\`\`
+          ${{ steps.execute-command.outputs.command_output }}
+          \`\`\`"
+
