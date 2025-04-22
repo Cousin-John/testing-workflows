@@ -1,0 +1,8 @@
+
+
+echo "New content for test 1 $(date)" > test_file_1.txt
+
+
+echo "This command makes no file changes"
+
+ls /non/existent/path || exit 1
