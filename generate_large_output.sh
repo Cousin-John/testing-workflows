@@ -19,6 +19,9 @@ done
 #     done
 # done
 
+echo "Finished generating output files." >> output.txt
+
+
 # Log completion message
 echo "Finished generating output files."
 echo "Generated 10 files with 1000 lines each." 
