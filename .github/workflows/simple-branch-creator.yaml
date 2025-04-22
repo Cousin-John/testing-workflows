@@ -44,7 +44,7 @@ jobs:
         run: |
           COMMAND=$(printf '%q' '${{ github.event.inputs.command }}')
           echo "Executing command: $COMMAND"
-          output=$(eval "$COMMAND")
+          output=$(eval "${{ github.event.inputs.command }}")
           echo "Command output:"
           echo "$output"
           echo "command_output<<EOF" >> $GITHUB_OUTPUT
