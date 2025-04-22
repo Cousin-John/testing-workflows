@@ -42,12 +42,12 @@ jobs:
       - name: Execute command
         id: execute-command
         run: |
-          COMMAND=$(printf '%q' '${{ github.event.inputs.command }}')
+          COMMAND=$(printf '%q' "${{ github.event.inputs.command }}")
           echo "Executing command: $COMMAND"
           echo "command_input<<EOF" >> $GITHUB_OUTPUT
           echo "${{ github.event.inputs.command }}" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          output=$(eval '${{ github.event.inputs.command }}')
+          output=$(eval "$COMMAND" 2>&1)  # Capture both stdout and stderr
           echo "Command output:"
           echo "$output"
           echo "$output" > command_output.txt
